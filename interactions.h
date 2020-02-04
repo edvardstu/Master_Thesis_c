@@ -3,7 +3,11 @@
 
 void forceHarmonicCircular(double *fx_p, double *fy_p, double r_coord, double x, double y, double r_boundary, double lambda_harmonic);
 
+void forceHarmonicInfWell(double *fx_b, double *fy_b, double x, double y, double L, double lambda_harmonic);
+
 void torqueHarmonicCircular(double *torque_b, double r_coord, double x, double y, double theta, double lambda_harmonic, double kappa_harmonic);
+
+void torqueHarmonicInfWell(double *torque_b, double x, double y, double theta, double L, double lambda_harmonic, double kappa_harmonic);
 
 void forceWeeksChandlerAndersen(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y);
 

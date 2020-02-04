@@ -22,11 +22,15 @@ unsigned long int random_seed(){
  return (tv.tv_sec + tv.tv_usec);
 }
 
-void setUpRNG(const gsl_rng_type **T, gsl_rng **r){
+void setUpRNG(const gsl_rng_type **T, gsl_rng **r, bool rndSeed){
     gsl_rng_env_setup();
     *T = gsl_rng_default;
     *r = gsl_rng_alloc (*T);
-    gsl_rng_set(*r, random_seed());
+    if (rndSeed == true){
+        gsl_rng_set(*r, random_seed());
+    } else {
+        gsl_rng_set(*r, 0);
+    }
     printf ("RNG type: %s\n", gsl_rng_name(*r));
 }
 

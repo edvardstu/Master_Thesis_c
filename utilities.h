@@ -9,7 +9,7 @@ void testFunc();
 
 unsigned long int random_seed();
 
-void setUpRNG(const gsl_rng_type **T, gsl_rng **r);
+void setUpRNG(const gsl_rng_type **T, gsl_rng **r, bool rndSeed);
 
 double randDouble(double min, double max, gsl_rng ** r);
 

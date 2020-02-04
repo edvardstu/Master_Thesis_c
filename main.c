@@ -14,14 +14,14 @@
 
 
 
-#define R 17.0
+#define R 4//30.0//17.0
 #define R_PARTICLE 0.5
-#define N_PARTICLES 1000
+#define N_PARTICLES 1
 #define U_0 10.0
-#define D_R_C 0.2
+#define D_R_C 10.0 //0.2
 
-#define N_STEPS 500000//1000000
-#define DT 0.00005 //NB 10 times smaller than eariler
+#define N_STEPS 1000000//1000000
+#define DT 0.001
 
 //Diffusive parameters
 #define GAMMA_T 1
@@ -43,15 +43,19 @@ const double SIGMA_PP = 1.5;//sqrt(2.0);//1/sqrt(2);
 const double a = sqrt(3);
 
 //Fixed boundary particles
-#define N_FIXED_PARTICLES 100
+#define N_FIXED_PARTICLES 0
 
+//Infinite well variables
+#define L 5.0
+#define U_S 1.0
 
 
 
 
 int main(int argc, char **argv) {
     double time_start = walltime();
-    bool useAB = false;
+    bool useAB = true;
+    bool rndSeed = true;
 
     double f_AB1 = 1.5;
     double f_AB2 = 0.5;
@@ -60,20 +64,25 @@ int main(int argc, char **argv) {
         f_AB2 = 0.0;
     }
 
+
+    //For testing solver, bool rndSeed
+    /*
+    int FACTOR;
+    double N_STEPS, DT;
+    for (FACTOR = 1; FACTOR <= 1; FACTOR*=10){
+        //N_STEPS = 1000*FACTOR;
+        N_STEPS = 10000*FACTOR;
+        DT = 0.001/FACTOR;
+    */
+
+    //Timeframe setup
     bool continueFromPrev = false;
     int numberOfTimeframes = 1;
     for (int k=0; k<numberOfTimeframes; k++){
     printf("Timeframe %d of %d\n", k+1, numberOfTimeframes);
 
 
-    /*
-    //For testing solver
-    int FACTOR;
-    double N_STEPS, DT;
-    for (FACTOR = 1; FACTOR < 100000; FACTOR*=10){
-        N_STEPS = 400*FACTOR;
-        DT = 0.01/FACTOR;
-    */
+
 
     /*
     //Check the number of particles compared to the size of the system
@@ -101,7 +110,8 @@ int main(int argc, char **argv) {
     //Parameters for particle particle interaction
     double delta_x, delta_y, temp_fx_n, temp_fy_n, temp_torque_n, r_pn_2;
 
-    const char * restrict fileNameBase = "results/fixed_boundary/testForceChains";
+    const char * restrict fileNameBase = "results/infWell/test";
+    //const char * restrict fileNameBase = "results/benchmark/benchmarkLongRunAB";
     //const char * restrict fileNameBase = "/home/edvardst/Documents/NTNU/Programming/Project_Assignment/C_plots/Results/Integrators/ABN100";
     const bool overwrite = true;
     const char * restrict fileName;
@@ -131,7 +141,7 @@ int main(int argc, char **argv) {
     //////////////////////Setting up GSL RNG ////////////////////////
     const gsl_rng_type * T;
     gsl_rng * r;
-    setUpRNG(&T, &r);
+    setUpRNG(&T, &r, rndSeed);
     /////////////////////////////////////////////////////////////////
 
     //////////Setting up particle position and angle ////////////////
@@ -140,7 +150,9 @@ int main(int argc, char **argv) {
         time = 0;
         D_R = D_R_C;
         //sunflower(x, y, N_PARTICLES, 0, R);
-        sunflower_fixed_boundary(x, y, N_PARTICLES, 0, R+1.0, N_FIXED_PARTICLES, R*0.95);
+        x[0] = L/2;
+        y[0] = L/2;
+        //sunflower_fixed_boundary(x, y, N_PARTICLES, 0, R+1.0, N_FIXED_PARTICLES, R*0.95);
         for (i=0; i<N_FIXED_PARTICLES; i++){
             //theta[i] = atan2(y[i], x[i]) + M_PI/2;
             theta[i]=randDouble(-M_PI, M_PI, &r);
@@ -173,16 +185,17 @@ int main(int argc, char **argv) {
 
     fs_scale = 0.0;
     //For each time step
+    double n_scale_steps = 1; //50000;
     for (t = 1; t <= N_STEPS; t++){
         if (t % 10000 ==0 ) printf("%d\n",t);
 
 
-        if (t <= 50000){
+        if (t <= n_scale_steps){
             if (!continueFromPrev){
-                fs_scale=0.01+t*0.99/50000.0;
+                fs_scale=t/n_scale_steps;
             } else {
                 fs_scale=1.0;
-                D_R = D_R_I + 0.2*(t/50000.0);
+                D_R = D_R_I + 0.2*(t/n_scale_steps);
             }
         }
         //Should not be here, only for solver testing
@@ -201,6 +214,11 @@ int main(int argc, char **argv) {
             fx_b = 0;
             fy_b = 0;
             torque_b = 0;
+            forceHarmonicInfWell(&fx_b, &fy_b, x[index_p], y[index_p], L, LAMBDA_HAR);
+            fy_b -= U_S;
+            torqueHarmonicInfWell(&torque_b, x[index_p], y[index_p], theta[index_p], L, LAMBDA_HAR, KAPPA_HAR);
+
+            /*
             r_coord = sqrt(x[index_p]*x[index_p]+y[index_p]*y[index_p]);
             if (r_coord > R){
                 forceHarmonicCircular(&fx_b, &fy_b, r_coord, x[index_p], y[index_p], R, LAMBDA_HAR);
@@ -212,23 +230,6 @@ int main(int argc, char **argv) {
                 delta_y = y[index_p]-y[index_n];
                 r_pn_2 = delta_x*delta_x + delta_y*delta_y;
 
-                /* For WeeksChandlerAndersen potential
-                if (r_pn_2 < R_CUT_OFF_TORQUE_2){
-                    if (r_pn_2 < 1.0){
-                    //Here it is assumed that sigma=1/2^(1/6) which gives a particle radius of 1
-                        forceWeeksChandlerAndersen(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
-                        fx_n[index_p] += temp_fx_n;
-                        fy_n[index_p] += temp_fy_n;
-                        fx_n[index_n] -= temp_fx_n;
-                        fy_n[index_n] -= temp_fy_n;
-                    }
-                    torqueWeeksChandlerAndersen(&temp_torque_n, theta[index_p], theta[index_n], GAMMA_PP);
-                    torque_n[index_p] += temp_torque_n;
-                    torque_n[index_n] -= temp_torque_n;
-                    number_n[index_n]++;
-                    number_n[index_p]++;
-
-                } */
                 if (r_pn_2 < 2*SIGMA_PP*SIGMA_PP) {
                     if (r_pn_2 < R_CUT_OFF_TORQUE_2){
                         //if (r_pn_2 < R_CUT_OFF_FORCE*R_CUT_OFF_FORCE){
@@ -253,6 +254,7 @@ int main(int argc, char **argv) {
 
 
             }
+            */ //For harmonic circular boundary and pp interaction.
 
             //Update Adams-Bashforth helping parameters
             Y_x[index_p] = U_0*cos(theta[index_p]) + (fx_b + fx_n[index_p])*fs_scale;
@@ -281,7 +283,8 @@ int main(int argc, char **argv) {
 
         }
         time += DT;
-        if (t % 1000 ==0){
+        if (t % 1 ==0){
+        //if (t % 100 ==0){
         //if (t%FACTOR == 0){
             for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, deformation_n[i]);
         }
@@ -290,7 +293,7 @@ int main(int argc, char **argv) {
         //printf("After t: %d, index_p: %d, Y_x: %f, Y_x_prev: %f\n", t, 2, Y_x[2], Y_x_prev[2]);
         swapPointers(&Y_y, &Y_y_prev);
         swapPointers(&Y_th, &Y_th_prev);
-    }
+    } //End of for t
     writeFinalState(fileNameBase, N_PARTICLES, time, x, y, theta, vx, vy, D_R);
 
 
@@ -305,6 +308,7 @@ int main(int argc, char **argv) {
     double time_end = walltime();
     printf("Simulation time: %7.3f s\n",(time_end-time_start));
     continueFromPrev=true;
-}
+} //End of for k, timeFrames
+//} //End of solver tester
 return 0;
 }

@@ -9,16 +9,41 @@
 
 void forceHarmonicCircular(double *fx_b, double *fy_b, double r_coord, double x, double y, double r_boundary, double lambda_harmonic){
     //Assume the circle is placed in (x,y)=(0,0)
-    double beta = atan2(y, x);
+    //double beta = atan2(y, x);
     double f = lambda_harmonic*(r_coord-r_boundary);
 
     *fx_b = -f*x/r_coord;
     *fy_b = -f*y/r_coord;
 }
 
+void forceHarmonicOneD(double *fx_b, double x, double x_boundary, double lambda_harmonic){
+    *fx_b = -lambda_harmonic*(x-x_boundary);
+}
+
+
+void forceHarmonicInfWell(double *fx_b, double *fy_b, double x, double y, double L, double lambda_harmonic){
+    if (x<0.0) {
+        forceHarmonicOneD(fx_b, x, 0.0, lambda_harmonic);
+    } else if (x>L) {
+        forceHarmonicOneD(fx_b, x, L, lambda_harmonic);
+    }
+
+    if (y<0.0){
+        forceHarmonicOneD(fy_b, y, 0.0, lambda_harmonic);
+    }
+}
+
 void torqueHarmonicCircular(double *torque_b, double r_coord, double x, double y, double theta, double lambda_harmonic, double kappa_harmonic){
     double beta = atan2(y, x);
     *torque_b = lambda_harmonic*kappa_harmonic*sin(2*(theta-beta));
+}
+
+void torqueHarmonicInfWell(double *torque_b, double x, double y, double theta, double L, double lambda_harmonic, double kappa_harmonic){
+    if ((x<0.0) || (x>L)){
+        *torque_b = lambda_harmonic*kappa_harmonic*sin(2*theta);
+    } else if (y<0.0){
+        *torque_b = lambda_harmonic*kappa_harmonic*sin(2*theta-M_PI);
+    }
 }
 
 void forceWeeksChandlerAndersen(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y){
