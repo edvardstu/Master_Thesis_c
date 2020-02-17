@@ -1,4 +1,4 @@
-#include <stdio.h>
+a#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <errno.h>
@@ -18,9 +18,9 @@
 #define R_PARTICLE 0.5
 #define N_PARTICLES 1
 #define U_0 10.0
-#define D_R_C 10.0 //0.2
+#define D_R_C 5.0 //0.2
 
-#define N_STEPS 1000000//1000000
+#define N_STEPS 100000000//1000000
 #define DT 0.001
 
 //Diffusive parameters
@@ -46,8 +46,8 @@ const double a = sqrt(3);
 #define N_FIXED_PARTICLES 0
 
 //Infinite well variables
-#define L 5.0
-#define U_S 1.0
+#define L 50.0
+#define U_S 0.5
 
 
 
@@ -56,6 +56,11 @@ int main(int argc, char **argv) {
     double time_start = walltime();
     bool useAB = true;
     bool rndSeed = true;
+    bool continueFromPrev = false;
+
+    const char * restrict fileNameBase = "results/infWell/test";
+    //const char * restrict fileNameBase = "results/benchmark/benchmarkLongRunAB";
+    //const char * restrict fileNameBase = "/home/edvardst/Documents/NTNU/Programming/Project_Assignment/C_plots/Results/Integrators/ABN100";
 
     double f_AB1 = 1.5;
     double f_AB2 = 0.5;
@@ -76,7 +81,7 @@ int main(int argc, char **argv) {
     */
 
     //Timeframe setup
-    bool continueFromPrev = false;
+
     int numberOfTimeframes = 1;
     for (int k=0; k<numberOfTimeframes; k++){
     printf("Timeframe %d of %d\n", k+1, numberOfTimeframes);
@@ -110,9 +115,7 @@ int main(int argc, char **argv) {
     //Parameters for particle particle interaction
     double delta_x, delta_y, temp_fx_n, temp_fy_n, temp_torque_n, r_pn_2;
 
-    const char * restrict fileNameBase = "results/infWell/test";
-    //const char * restrict fileNameBase = "results/benchmark/benchmarkLongRunAB";
-    //const char * restrict fileNameBase = "/home/edvardst/Documents/NTNU/Programming/Project_Assignment/C_plots/Results/Integrators/ABN100";
+
     const bool overwrite = true;
     const char * restrict fileName;
 
@@ -283,7 +286,7 @@ int main(int argc, char **argv) {
 
         }
         time += DT;
-        if (t % 1 ==0){
+        if (t % 100 ==0){
         //if (t % 100 ==0){
         //if (t%FACTOR == 0){
             for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, deformation_n[i]);
