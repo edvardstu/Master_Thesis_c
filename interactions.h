@@ -5,7 +5,11 @@ void forceHarmonicCircular(double *fx_p, double *fy_p, double r_coord, double x,
 
 void forceHarmonicInfWell(double *fx_b, double *fy_b, double x, double y, double L, double lambda_harmonic);
 
+void forceHarmonicOneD(double *fx_b, double x, double x_boundary, double lambda_harmonic);
+
 void torqueHarmonicCircular(double *torque_b, double r_coord, double x, double y, double theta, double lambda_harmonic, double kappa_harmonic);
+
+void torqueHarmonicOneD(double *torque_b, double theta, double beta, double lambda_harmonic, double kappa_harmonic);
 
 void torqueHarmonicInfWell(double *torque_b, double x, double y, double theta, double L, double lambda_harmonic, double kappa_harmonic);
 

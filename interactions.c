@@ -38,6 +38,11 @@ void torqueHarmonicCircular(double *torque_b, double r_coord, double x, double y
     *torque_b = lambda_harmonic*kappa_harmonic*sin(2*(theta-beta));
 }
 
+void torqueHarmonicOneD(double *torque_b, double theta, double beta, double lambda_harmonic, double kappa_harmonic){
+    *torque_b = lambda_harmonic*kappa_harmonic*sin(2*(theta-beta));
+    //*torque_b = lambda_harmonic*kappa_harmonic*sin(2*theta-beta);
+}
+
 void torqueHarmonicInfWell(double *torque_b, double x, double y, double theta, double L, double lambda_harmonic, double kappa_harmonic){
     if ((x<0.0) || (x>L)){
         *torque_b = lambda_harmonic*kappa_harmonic*sin(2*theta);
