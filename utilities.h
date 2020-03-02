@@ -23,6 +23,8 @@ double radius(int index, int n_particles, int n_boundary, double R);
 
 void sunflower_fixed_boundary(double x[], double y[], int n_particles, int alpha, double R, int n_fixed, double R_reduced);
 
+void uniform_rectangle(double x[], double y[], int n_particles, double L, double H, gsl_rng** r);
+
 double walltime();
 
 const char* restrict createFileNameBase(const char* restrict fileNameBase, bool overwrite);

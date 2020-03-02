@@ -19,12 +19,12 @@
 
 #define R 30.0//17.0
 #define R_PARTICLE 0.5
-#define N_PARTICLES 100
+#define N_PARTICLES 500
 #define U_0 10.0
-#define D_R_C 0.0 //0.2
+#define D_R_C 3.2 //0.2
 
-#define N_STEPS 10000//1000000
-#define DT 0.0001
+#define N_STEPS 100000//1000000
+#define DT 0.0005
 
 //Diffusive parameters
 #define GAMMA_T 1
@@ -56,7 +56,7 @@ const double a = sqrt(3);
 #define L 50.0
 #define H 20.0
 
-enum barrier {Circular, PeriodicTube, PeriodicFunnel};
+enum barrier {Circular, Periodic, PeriodicTube, PeriodicFunnel};
 
 
 int main(int argc, char **argv) {
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     bool rndSeed = true;
     const bool overwrite = true;
     bool continueFromPrev = false;
-    enum barrier simulationBarrier = PeriodicTube;
+    enum barrier simulationBarrier = Periodic;
 
     //const char * restrict fileNameBase = "results/infWell/test";
     const char * restrict fileNameBase = "results/periodic_tube/test";
@@ -178,7 +178,8 @@ int main(int argc, char **argv) {
     if (!continueFromPrev){
         time = 0;
         D_R = D_R_C;
-        sunflower(x, y, N_PARTICLES, 0, R);
+        //sunflower(x, y, N_PARTICLES, 0, R);
+        uniform_rectangle(x, y, N_PARTICLES, L, H, &r);
         //sunflower_fixed_boundary(x, y, N_PARTICLES, 0, R+1.0, N_FIXED_PARTICLES, R*0.95);
         for (i=0; i<N_FIXED_PARTICLES; i++){
             //theta[i] = atan2(y[i], x[i]) + M_PI/2;
@@ -198,10 +199,16 @@ int main(int argc, char **argv) {
             printf("D_r was initilized to %.3f, but change to %.3f\n", D_R_C, D_R_I);
         }
     }
-    // x[0]=0;
-    // y[0]=H/2;
-    // theta[0] = M_PI/4;
-
+    // x[0]=L/4;
+    // y[0]=0;
+    // theta[0] = M_PI/2;
+    // x[1]=-L/4;
+    // y[1]=0;
+    // theta[1] = -M_PI/2;
+    // vx[0] = U_0*cos(theta[0]);
+    // vy[0] = U_0*sin(theta[0]);
+    // vx[1] = U_0*cos(theta[1]);
+    // vy[1] = U_0*sin(theta[1]);
 
 
     /////////////////////////////////////////////////////////////////
@@ -344,7 +351,11 @@ int main(int argc, char **argv) {
 
             case PeriodicTube:
                 //corePeriodicTube(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR);
-                corePeriodicTube(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR);
+                corePeriodicTube(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
+                break;
+
+            case Periodic:
+                corePeriodic(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
                 break;
 
             case PeriodicFunnel:
@@ -356,7 +367,7 @@ int main(int argc, char **argv) {
         //#pragma omp barrier
         if (thread_n == 0){
         time += DT;
-        if (t % 100 ==0){
+        if (t % 1000 ==0){
         //if (t%FACTOR == 0){
             for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, deformation_n[i]);
         }

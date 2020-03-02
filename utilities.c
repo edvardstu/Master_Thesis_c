@@ -115,6 +115,78 @@ void sunflower_fixed_boundary(double x[], double y[], int n_particles, int alpha
     }
 }
 
+void uniform_rectangle_old(double x[], double y[], int n_particles, double L, double H){
+    int N_L = ceil(sqrt(n_particles*L/H));
+    int N_H = ceil(sqrt(n_particles*H/L));
+    double delta_L = L/(N_L+1);
+    double delta_H = H/(N_H+1);
+
+    for (int i_L = 0; i_L < N_L; i_L++){
+        for (int i_H=0; i_H < N_H; i_H++){
+            if (i_L*i_H>=n_particles){
+                break;
+            }
+            x[i_L+N_L*i_H] = -L/2 + (i_L+1)*delta_L;
+            y[i_L+N_L*i_H] = H/2 - (i_H+1)*delta_H;
+        }
+    }
+}
+
+void uniform_rectangle(double x[], double y[], int n_particles, double L, double H, gsl_rng** r){
+    double l = L/2;
+    double h = H/2;
+    int i, j;
+    int n_dens = 100*n_particles;
+    for (i = 0; i < n_particles; i++){
+        x[i] = randDouble(-l, l, r);
+        y[i] = randDouble(-h, h, r);
+    }
+
+    double x_dens[n_dens], y_dens[n_dens];
+    for (j = 0; j < n_dens; j++){
+        x_dens[j] = randDouble(-l, l, r);
+        y_dens[j] = randDouble(-h, h, r);
+    }
+
+    double dx, dy, dr, dr_min;
+    double x_tot[n_particles], y_tot[n_particles], num[n_particles];
+    int index_mem;
+
+
+    for (int k = 0; k<10; k++){
+        for (i = 0; i < n_particles; i++){
+            x_tot[i] = 0;
+            y_tot[i] = 0;
+            num[i] = 0;
+        }
+
+        for (j = 0; j < n_dens; j++){
+            dr_min = 10*L; //Should be larger than biggest possible dr
+            for (i = 0; i < n_particles; i++){
+                dx = x_dens[j]-x[i];
+                dy = y_dens[j]-y[i];
+                dr = sqrt(dx*dx+dy*dy);
+                if (dr < dr_min){
+                    index_mem = i;
+                    dr_min = dr;
+                }
+            }
+            x_tot[index_mem] += x_dens[j];
+            y_tot[index_mem] += y_dens[j];
+            num[index_mem] ++;
+        }
+
+        for (i = 0; i < n_particles; i++){
+            if (num[i] > 0){
+                x[i] = x_tot[i]/num[i];
+                y[i] = y_tot[i]/num[i];
+            }
+
+        }
+    }
+
+}
+
 double walltime(){
 	static struct timeval t;
 	gettimeofday ( &t, NULL );
