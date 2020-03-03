@@ -7,6 +7,8 @@ void forceHarmonicInfWell(double *fx_b, double *fy_b, double x, double y, double
 
 void forceHarmonicOneD(double *fx_b, double x, double x_boundary, double lambda_harmonic);
 
+void forceHarmonicFunnel(double *fx_b, double *fy_b, double x, double y, double l, double h, double h_funnel, double lambda_harmonic);
+
 void torqueHarmonicCircular(double *torque_b, double r_coord, double x, double y, double theta, double lambda_harmonic, double kappa_harmonic);
 
 void torqueHarmonicOneD(double *torque_b, double theta, double beta, double lambda_harmonic, double kappa_harmonic);

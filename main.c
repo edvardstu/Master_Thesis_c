@@ -23,7 +23,7 @@
 #define U_0 10.0
 #define D_R_C 3.2 //0.2
 
-#define N_STEPS 100000//1000000
+#define N_STEPS 10000//1000000
 #define DT 0.0005
 
 //Diffusive parameters
@@ -79,10 +79,10 @@ int main(int argc, char **argv) {
 
     double time_start = walltime();
     bool useAB = false;
-    bool rndSeed = true;
+    bool rndSeed = false;
     const bool overwrite = true;
     bool continueFromPrev = false;
-    enum barrier simulationBarrier = Periodic;
+    enum barrier simulationBarrier = PeriodicFunnel;
 
     //const char * restrict fileNameBase = "results/infWell/test";
     const char * restrict fileNameBase = "results/periodic_tube/test";
@@ -359,8 +359,7 @@ int main(int argc, char **argv) {
                 break;
 
             case PeriodicFunnel:
-                printf("Periodic funnel not implemented\n");
-                exit(0);
+                corePeriodicFunnel(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, H/2, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
                 break;
         } // switch simulationBarrier
 
