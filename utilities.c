@@ -247,6 +247,20 @@ const char* restrict createFileName(const char* restrict fileNameBase){
     return fileName;
 }
 
+const char* restrict createFileNameSucs(const char* restrict fileNameBase){
+    const char * restrict fileName;
+    const char * restrict susc = "Susc";
+    const char * TXT = ".txt";
+    str_builder_t *sb;
+    sb = str_builder_create();
+    str_builder_add_str(sb, fileNameBase, 0);
+    str_builder_add_str(sb, susc, 0);
+    str_builder_add_str(sb, TXT, 0);
+    fileName = str_builder_dump(sb, NULL);
+    str_builder_destroy(sb);
+    return fileName;
+}
+
 void writeSimulationParameters(const char* restrict fileNameBase, double r, double r_particle, unsigned int n_particles, double u_0, double D_r, unsigned int n_steps, double dt, double gamma_t, double gamma_r, double lambda_har, double kappa_har, double gamma_pp, double r_cut_off_torque_2, double lambda_pp, double r_cut_off_force, double sigma_pp){
     str_builder_t *sb;
     FILE *fp;

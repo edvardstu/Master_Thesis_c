@@ -29,13 +29,15 @@ void corePeriodic(int t, double* x, double* y, double* theta, double* vx, double
 
             delta_y = y[index_p]-y[index_n];
             if (fabs(delta_y) > (h-sqrt(2)*sigma_pp)){
-                delta_y = delta_y - h*(1.0-2.0*signbit(delta_x));
+                delta_y = delta_y - h*(1.0-2.0*signbit(delta_y));
             }
 
             r_pn_2 = delta_x*delta_x + delta_y*delta_y;
 
+            //if (r_pn_2 < 1.08683418){
             if (r_pn_2 < 2*sigma_pp*sigma_pp) {
-                if (r_pn_2 < r_cut_off_torque_2){
+            //if (r_pn_2 < 4.0) {
+                //if (r_pn_2 < r_cut_off_torque_2){
                     //if (r_pn_2 < R_CUT_OFF_FORCE*R_CUT_OFF_FORCE){
                     //if (r_pn_2 < 1.0){
 
@@ -44,7 +46,10 @@ void corePeriodic(int t, double* x, double* y, double* theta, double* vx, double
                     torque_n[index_n] -= temp_torque_n;
                     number_n[index_n]++;
                     number_n[index_p]++;
-                }
+                //}
+                //forceWeeksChandlerAndersen(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
+                //forceLennardJonesShifted(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
+                //forceLennardJonesRepAndExpRep(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
                 //forceHarmonicPP(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, R_CUT_OFF_FORCE, LAMBDA_PP);
                 //forceOneOverRQuad(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
                 forceOneOverRQuadSig(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sigma_pp);

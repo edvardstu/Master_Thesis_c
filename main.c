@@ -19,12 +19,12 @@
 
 #define R 30.0//17.0
 #define R_PARTICLE 0.5
-#define N_PARTICLES 500
-#define U_0 10.0
-#define D_R_C 3.2 //0.2
+#define N_PARTICLES 1000
+#define U_0 1.0
+#define D_R_C 2.0 //0.2
 
-#define N_STEPS 10000//1000000
-#define DT 0.0005
+#define N_STEPS 50000//1000000
+#define DT 0.005 //0.0005 for U_0=10.0
 
 //Diffusive parameters
 #define GAMMA_T 1
@@ -49,12 +49,12 @@ const double a = sqrt(3);
 #define N_FIXED_PARTICLES 0
 
 //Infinite well variables
-#define L 50.0
+//#define L 50.0
 #define U_S 0.5
 
 //Periodic tube variables
-#define L 50.0
-#define H 20.0
+#define L 45.0
+#define H 45.0
 
 enum barrier {Circular, Periodic, PeriodicTube, PeriodicFunnel};
 
@@ -79,13 +79,15 @@ int main(int argc, char **argv) {
 
     double time_start = walltime();
     bool useAB = false;
-    bool rndSeed = false;
+    bool rndSeed = true;
     const bool overwrite = true;
     bool continueFromPrev = false;
-    enum barrier simulationBarrier = PeriodicFunnel;
+    enum barrier simulationBarrier = Periodic;
+    int writeInterval = 500;
 
     //const char * restrict fileNameBase = "results/infWell/test";
-    const char * restrict fileNameBase = "results/periodic_tube/test";
+    const char * restrict fileNameBase = "results/periodic_2D/fpsf";
+
 
 
     double f_AB1 = 1.5;
@@ -112,9 +114,12 @@ int main(int argc, char **argv) {
     for (int k=0; k<numberOfTimeframes; k++){
     printf("Timeframe %d of %d\n", k+1, numberOfTimeframes);
 
+    //Calculate density. Assume particle radius is 0.5.
+    //Implies that p-p-WCA-interaction has a cutoff distance of 1.0
+    //Assume random close packing of 0.82 (https://www.sciencedirect.com/science/article/abs/pii/0021979771903389)
 
-
-
+    double packingFraction = M_PI*0.25*N_PARTICLES/(H*L*0.82);
+    printf("The packing fraction of the system is %f\n", packingFraction);
     /*
     //Check the number of particles compared to the size of the system
     double r_particle = (R_CUT_OFF_FORCE-U_0/LAMBDA_PP)/2;
@@ -131,7 +136,7 @@ int main(int argc, char **argv) {
 
 
     //////////////////////Setting up variables ////////////////////////
-    FILE *fp;
+    FILE *fp, *fp2;
     double x[N_PARTICLES], y[N_PARTICLES], theta[N_PARTICLES], vx[N_PARTICLES], vy[N_PARTICLES];
     double fs_scale, time;
     //Loop parameters
@@ -140,10 +145,14 @@ int main(int argc, char **argv) {
     double r_coord, fx_b, fy_b, torque_b;
     //Parameters for particle particle interaction
     double delta_x, delta_y, temp_fx_n, temp_fy_n, temp_torque_n, r_pn_2;
+    //Parameters for four point susceptibility
+    double omega;
 
 
 
     const char * restrict fileName;
+    const char * restrict fileNamePrevious;
+    const char * restrict fileNameSusc;
 
     //Helping variables for Adams_Bashforth
     double *Y_x = malloc(N_PARTICLES*sizeof(double));
@@ -154,7 +163,7 @@ int main(int argc, char **argv) {
     double *Y_th_prev = malloc(N_PARTICLES*sizeof(double));
 
     //Parameters for loading previos Results
-    const char * restrict fileNamePrevious;
+
     //bool continueFromPrev = true;
     double D_R;
     double D_R_I;
@@ -165,6 +174,7 @@ int main(int argc, char **argv) {
     fileNamePrevious = createFileNamePrevious(fileNameBase, overwrite);
     fileNameBase = createFileNameBase(fileNameBase, overwrite);
     fileName = createFileName(fileNameBase);
+    fileNameSusc = createFileNameSucs(fileNameBase);
     ///////////////////////////////////////////////////////////////////
 
     //////////////////////Setting up GSL RNG ////////////////////////
@@ -216,13 +226,14 @@ int main(int argc, char **argv) {
     ///////////////////Opening file for results ///////////////////////
     writeSimulationParameters(fileNameBase, R, R_PARTICLE, N_PARTICLES, U_0, D_R, N_STEPS, DT, GAMMA_T, GAMMA_R, LAMBDA_HAR, KAPPA_HAR, GAMMA_PP, R_CUT_OFF_TORQUE_2, LAMBDA_PP, R_CUT_OFF_FORCE, SIGMA_PP);
     openFile(fileName, &fp);
+    openFile(fileNameSusc, &fp2);
     for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, 0.0);
     /////////////////////////////////////////////////////////////////
 
 
     fs_scale = 0.0;
     //For each time step
-    double n_scale_steps = 1; //50000;
+    double n_scale_steps = 10000; //50000;
 
     double fx_n[N_PARTICLES] = {0};
     double fy_n[N_PARTICLES] = {0};
@@ -366,10 +377,22 @@ int main(int argc, char **argv) {
         //#pragma omp barrier
         if (thread_n == 0){
         time += DT;
-        if (t % 1000 ==0){
+        if (t % writeInterval == 0){
         //if (t%FACTOR == 0){
             for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, deformation_n[i]);
         }
+
+
+        omega = 0.0;
+        for (i=0; i<N_PARTICLES; i++){
+            delta_x = vx[i];
+            delta_y = vy[i];
+            if ((delta_x*delta_x+delta_y*delta_y)<(0.25*U_0*U_0)){
+                omega+=1.0;
+            }
+        }
+        omega/=N_PARTICLES;
+        fprintf(fp2, "%lf %lf\n", time, omega);
 
         //Swapping pointer of help parameters for AB
         swapPointers(&Y_x, &Y_x_prev);
@@ -384,6 +407,7 @@ int main(int argc, char **argv) {
 
     ///////////////////Closing file with results //////////////////////
     closeFile(fileName, &fp);
+    closeFile(fileNameSusc, &fp2);
     ///////////////////////////////////////////////////////////////////
     //Freeing RNG
     gsl_rng_free (r);

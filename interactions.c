@@ -68,6 +68,23 @@ void forceWeeksChandlerAndersen(double *fx_n, double *fy_n, double r_pn_2, doubl
     *fy_n = f*delta_y;
 }
 
+void forceLennardJonesShifted(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y){
+    //Cutoff for this function should be (13/7)^(1/6)
+    double r_pn_6 = r_pn_2*r_pn_2*r_pn_2;
+    double f = 12*(1.0/r_pn_6-1.0)/(r_pn_6*r_pn_2) + 2.6899008972047/sqrt(r_pn_2);
+    *fx_n = f*delta_x;
+    *fy_n = f*delta_y;
+}
+
+void forceLennardJonesRepAndExpRep(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y){
+    //Cutoff for this function should be (13/7)^(1/6)
+    double r_pn_6 = r_pn_2*r_pn_2*r_pn_2;
+    //double r_pn_1 = sqrt(r_pn_2);
+    double f = 12.0/(r_pn_6*r_pn_6*r_pn_2);// + exp(-r_pn_1/2)/(2*r_pn_1);
+    *fx_n = f*delta_x;
+    *fy_n = f*delta_y;
+}
+
 void forceHarmonicPP(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y, double r_cut_off_force, double lambda_pp){
     double f = -lambda_pp*(sqrt(r_pn_2)-r_cut_off_force);
     *fx_n = f*delta_x/sqrt(r_pn_2);
@@ -99,6 +116,7 @@ void forceOneOverRQuadSig(double *fx_n, double *fy_n, double r_pn_2, double delt
 /*void torqueWeeksChandlerAndersen(double *torque_n, double theta_p, double theta_n, double gamma_pp){
     *torque_n = gamma_pp*sin(theta_n-theta_p);
 }*/
+
 
 void torqueWeeksChandlerAndersen(double *torque_n, double theta_p, double theta_n, double gamma_pp, double r_pn_2){
     *torque_n = (1/r_pn_2)*gamma_pp*sin(theta_n-theta_p);

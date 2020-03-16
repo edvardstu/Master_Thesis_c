@@ -17,6 +17,10 @@ void torqueHarmonicInfWell(double *torque_b, double x, double y, double theta, d
 
 void forceWeeksChandlerAndersen(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y);
 
+void forceLennardJonesShifted(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y);
+
+void forceLennardJonesRepAndExpRep(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y);
+
 void forceHarmonicPP(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y, double r_cut_off_force, double lambda_pp);
 
 void forceOneOverRSquared(double *fx_n, double *fy_n, double r_pn_2, double delta_x, double delta_y, double sigma_pp);
