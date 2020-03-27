@@ -119,6 +119,6 @@ void forceOneOverRQuadSig(double *fx_n, double *fy_n, double r_pn_2, double delt
 
 
 void torqueWeeksChandlerAndersen(double *torque_n, double theta_p, double theta_n, double gamma_pp, double r_pn_2){
-    *torque_n = (1/r_pn_2)*gamma_pp*sin(theta_n-theta_p);
+    *torque_n = gamma_pp*sin(theta_n-theta_p);//*(1/r_pn_2);
     //*torque_n = (1/r_pn_2)*sin(theta_n-theta_p);
 }

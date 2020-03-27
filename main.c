@@ -18,12 +18,14 @@
 
 
 #define R 30.0//17.0
+#define L 25.0
+#define H 25.0
 #define R_PARTICLE 0.5
-#define N_PARTICLES 1000
+#define N_PARTICLES_I 1000
 #define U_0 1.0
-#define D_R_C 2.0 //0.2
+#define D_R_C 0.5 //0.2
 
-#define N_STEPS 50000//1000000
+#define N_STEPS 500000//1000000
 #define DT 0.005 //0.0005 for U_0=10.0
 
 //Diffusive parameters
@@ -35,13 +37,13 @@
 #define KAPPA_HAR 10.0  //GS
 
 //Particle particle interaction
-#define GAMMA_PP 10.0//1.0 //GAM
+#define GAMMA_PP 1.0//1.0 //GAM
 #define R_CUT_OFF_TORQUE_2 4.0 //9.0
 #define LAMBDA_PP 40.0
 #define R_CUT_OFF_FORCE 1.0  //
 //#define SIGMA_PP pow(1/2, 1/6)
 //#define SIGMA_PP 1.0 //(SIGMA_PP*2)^2 > R_CUT_OFF_TORQUE_2
-const double SIGMA_PP = 1.5;//sqrt(2.0);//1/sqrt(2);
+const double SIGMA_PP = 1/sqrt(2);//1.5;//sqrt(2.0);//
 
 const double a = sqrt(3);
 
@@ -52,11 +54,9 @@ const double a = sqrt(3);
 //#define L 50.0
 #define U_S 0.5
 
-//Periodic tube variables
-#define L 45.0
-#define H 45.0
 
 enum barrier {Circular, Periodic, PeriodicTube, PeriodicFunnel};
+enum sweep {None, ParticleNumber, DiffusionCoefficient};
 
 
 int main(int argc, char **argv) {
@@ -78,15 +78,16 @@ int main(int argc, char **argv) {
     }*/
 
     double time_start = walltime();
-    bool useAB = false;
+    bool useAB = true;
     bool rndSeed = true;
-    const bool overwrite = true;
+    const bool overwrite = false;
     bool continueFromPrev = false;
     enum barrier simulationBarrier = Periodic;
-    int writeInterval = 500;
-
+    enum sweep simulationSweep = None;
+    int writeInterval = 200;
+    const char * restrict fileNameBaseInit = "results/periodic_2D/JammingDr0_5";
     //const char * restrict fileNameBase = "results/infWell/test";
-    const char * restrict fileNameBase = "results/periodic_2D/fpsf";
+
 
 
 
@@ -114,12 +115,36 @@ int main(int argc, char **argv) {
     for (int k=0; k<numberOfTimeframes; k++){
     printf("Timeframe %d of %d\n", k+1, numberOfTimeframes);
 
+
+    ///////////////////Setting up sweep variables /////////////////////
+    double D_R;
+    double D_R_I;
+    int N_PARTICLES;
+    double time;
+
+    switch (simulationSweep) {
+        case None:
+            time = 0;
+            D_R = D_R_C;
+            N_PARTICLES = N_PARTICLES_I*(k+1);
+            break;
+        case DiffusionCoefficient:
+            time = 0;
+            D_R = D_R_C;
+            N_PARTICLES = N_PARTICLES_I;
+            break;
+        case ParticleNumber:
+            time = 0;
+            D_R = D_R_C;
+            N_PARTICLES = N_PARTICLES_I*(k+1);
+            break;
+    }
+    ///////////////////////////////////////////////////////////////////
+
     //Calculate density. Assume particle radius is 0.5.
     //Implies that p-p-WCA-interaction has a cutoff distance of 1.0
     //Assume random close packing of 0.82 (https://www.sciencedirect.com/science/article/abs/pii/0021979771903389)
 
-    double packingFraction = M_PI*0.25*N_PARTICLES/(H*L*0.82);
-    printf("The packing fraction of the system is %f\n", packingFraction);
     /*
     //Check the number of particles compared to the size of the system
     double r_particle = (R_CUT_OFF_FORCE-U_0/LAMBDA_PP)/2;
@@ -138,7 +163,7 @@ int main(int argc, char **argv) {
     //////////////////////Setting up variables ////////////////////////
     FILE *fp, *fp2;
     double x[N_PARTICLES], y[N_PARTICLES], theta[N_PARTICLES], vx[N_PARTICLES], vy[N_PARTICLES];
-    double fs_scale, time;
+    double fs_scale;
     //Loop parameters
     unsigned int t, index_p, index_n, i;
     //Parameters for boundary
@@ -147,12 +172,6 @@ int main(int argc, char **argv) {
     double delta_x, delta_y, temp_fx_n, temp_fy_n, temp_torque_n, r_pn_2;
     //Parameters for four point susceptibility
     double omega;
-
-
-
-    const char * restrict fileName;
-    const char * restrict fileNamePrevious;
-    const char * restrict fileNameSusc;
 
     //Helping variables for Adams_Bashforth
     double *Y_x = malloc(N_PARTICLES*sizeof(double));
@@ -163,16 +182,26 @@ int main(int argc, char **argv) {
     double *Y_th_prev = malloc(N_PARTICLES*sizeof(double));
 
     //Parameters for loading previos Results
+    const char * restrict fileNameBase;
+    const char * restrict fileName;
+    const char * restrict fileNamePrevious;
+    const char * restrict fileNameSusc;
 
     //bool continueFromPrev = true;
-    double D_R;
-    double D_R_I;
+
     ///////////////////////////////////////////////////////////////////
 
 
-    //////////////////////Creating file names /////////////////////////
-    fileNamePrevious = createFileNamePrevious(fileNameBase, overwrite);
-    fileNameBase = createFileNameBase(fileNameBase, overwrite);
+    //////////////////////// System fractions /////////////////////////
+    double particleArea = M_PI*0.25;
+    double areaFaction = particleArea*N_PARTICLES/(H*L);
+    double packingFraction = areaFaction/0.82;
+    printf("The system has an area fraction of: %f, and a packing fraction of: %f\n",areaFaction, packingFraction);
+    ///////////////////////////////////////////////////////////////////
+
+    ////////////////////// Creating file names ////////////////////////
+    fileNamePrevious = createFileNamePrevious(fileNameBaseInit, overwrite);
+    fileNameBase = createFileNameBase(fileNameBaseInit, overwrite);
     fileName = createFileName(fileNameBase);
     fileNameSusc = createFileNameSucs(fileNameBase);
     ///////////////////////////////////////////////////////////////////
@@ -185,9 +214,8 @@ int main(int argc, char **argv) {
 
     //////////Setting up particle position and angle ////////////////
 
+
     if (!continueFromPrev){
-        time = 0;
-        D_R = D_R_C;
         //sunflower(x, y, N_PARTICLES, 0, R);
         uniform_rectangle(x, y, N_PARTICLES, L, H, &r);
         //sunflower_fixed_boundary(x, y, N_PARTICLES, 0, R+1.0, N_FIXED_PARTICLES, R*0.95);
@@ -209,6 +237,9 @@ int main(int argc, char **argv) {
             printf("D_r was initilized to %.3f, but change to %.3f\n", D_R_C, D_R_I);
         }
     }
+
+
+
     // x[0]=L/4;
     // y[0]=0;
     // theta[0] = M_PI/2;
@@ -233,13 +264,9 @@ int main(int argc, char **argv) {
 
     fs_scale = 0.0;
     //For each time step
-    double n_scale_steps = 10000; //50000;
+    double n_scale_steps = 1000; //50000;
 
-    double fx_n[N_PARTICLES] = {0};
-    double fy_n[N_PARTICLES] = {0};
-    double torque_n[N_PARTICLES] = {0};
-    double number_n[N_PARTICLES] = {0};
-    double deformation_n[N_PARTICLES] = {0};
+    double fx_n[N_PARTICLES], fy_n[N_PARTICLES], torque_n[N_PARTICLES], number_n[N_PARTICLES], deformation_n[N_PARTICLES];
 
 
     //#pragma omp parallel default(shared) private(index_p, index_n, fx_b, fy_b, torque_b, r_coord, delta_x, delta_y, r_pn_2, temp_torque_n, temp_fx_n, temp_fy_n)
@@ -415,7 +442,13 @@ int main(int argc, char **argv) {
 
     double time_end = walltime();
     printf("Simulation time: %7.3f s\n",(time_end-time_start));
-    continueFromPrev=true;
+    switch (simulationSweep) {
+        case DiffusionCoefficient:
+            continueFromPrev=true;
+        default:
+            continueFromPrev=false;
+    }
+
 } //End of for k, timeFrames
 //} //End of solver tester
 return 0;
