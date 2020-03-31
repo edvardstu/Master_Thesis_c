@@ -22,12 +22,11 @@ void forceHarmonicOneD(double *fx_b, double x, double x_boundary, double lambda_
 
 void forceHarmonicFunnel(double *fx_b, double *fy_b, double x, double y, double l, double h, double h_funnel, double lambda_harmonic){
     double hyp = sqrt((h-h_funnel)*(h-h_funnel)+l*l);
-    double dr = fabs((h-h_funnel)*x-l*y-h_funnel/2)/hyp;
+    double dr = fabs((h-h_funnel)*fabs(x)-l*fabs(y)+l*h_funnel/2)/hyp;
     double f = -lambda_harmonic*dr;
 
-
     *fx_b = -(1.0-2.0*signbit(x))*f * (h-h_funnel)/hyp;
-    *fy_b = (1.0-2.0*signbit(x))*f * l/hyp;
+    *fy_b = (1.0-2.0*signbit(y))*f * l/hyp;
 }
 
 void forceHarmonicInfWell(double *fx_b, double *fy_b, double x, double y, double L, double lambda_harmonic){

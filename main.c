@@ -18,14 +18,15 @@
 
 
 #define R 30.0//17.0
-#define L 25.0
-#define H 25.0
+#define L 27.0
+#define H 27.0
+#define H_FUNNEL 20.0
 #define R_PARTICLE 0.5
-#define N_PARTICLES_I 1000
+#define N_PARTICLES_I 500
 #define U_0 1.0
-#define D_R_C 0.5 //0.2
+#define D_R_C 0.0 //0.2
 
-#define N_STEPS 500000//1000000
+#define N_STEPS 50000//1000000
 #define DT 0.005 //0.0005 for U_0=10.0
 
 //Diffusive parameters
@@ -33,7 +34,7 @@
 #define GAMMA_R 1
 
 //Boundary interatction
-#define LAMBDA_HAR 20.0//200.0 //FS
+#define LAMBDA_HAR 10.0//20.0//200.0 //FS
 #define KAPPA_HAR 10.0  //GS
 
 //Particle particle interaction
@@ -80,12 +81,12 @@ int main(int argc, char **argv) {
     double time_start = walltime();
     bool useAB = true;
     bool rndSeed = true;
-    const bool overwrite = false;
+    const bool overwrite = true;
     bool continueFromPrev = false;
-    enum barrier simulationBarrier = Periodic;
+    enum barrier simulationBarrier = PeriodicFunnel;
     enum sweep simulationSweep = None;
     int writeInterval = 200;
-    const char * restrict fileNameBaseInit = "results/periodic_2D/JammingDr0_5";
+    const char * restrict fileNameBaseInit = "results/periodic_funnel/test";
     //const char * restrict fileNameBase = "results/infWell/test";
 
 
@@ -126,7 +127,7 @@ int main(int argc, char **argv) {
         case None:
             time = 0;
             D_R = D_R_C;
-            N_PARTICLES = N_PARTICLES_I*(k+1);
+            N_PARTICLES = N_PARTICLES_I;
             break;
         case DiffusionCoefficient:
             time = 0;
@@ -397,7 +398,7 @@ int main(int argc, char **argv) {
                 break;
 
             case PeriodicFunnel:
-                corePeriodicFunnel(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, H/2, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
+                corePeriodicFunnel(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, H_FUNNEL, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
                 break;
         } // switch simulationBarrier
 

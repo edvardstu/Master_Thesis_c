@@ -89,6 +89,8 @@ void corePeriodicTube(int t, double* x, double* y, double* theta, double* vx, do
         fx_b = 0;
         fy_b = 0;
         torque_b = 0;
+        double r_cut_off_force_2 = 1.21;
+
         if (fabs(y[index_p])> h/2){
             forceHarmonicOneD(&fy_b, y[index_p], (1.0-2.0*signbit(y[index_p]))*h/2, lambda_har);
             torqueHarmonicOneD(&torque_b, theta[index_p], M_PI/2, lambda_har, kappa_har);
@@ -97,14 +99,15 @@ void corePeriodicTube(int t, double* x, double* y, double* theta, double* vx, do
         //
         for (index_n = index_p + 1; index_n < n_particles; index_n++){
             delta_x = x[index_p]-x[index_n];
-            if (fabs(delta_x) > (l-sqrt(2)*sigma_pp)){
+            if (fabs(delta_x) > (l-sqrt(r_cut_off_force_2))){
                 delta_x = delta_x - l*(1.0-2.0*signbit(delta_x));
             }
             delta_y = y[index_p]-y[index_n];
             r_pn_2 = delta_x*delta_x + delta_y*delta_y;
 
-            if (r_pn_2 < 2*sigma_pp*sigma_pp) {
-                if (r_pn_2 < r_cut_off_torque_2){
+            if (r_pn_2 < r_cut_off_force_2){
+            //if (r_pn_2 < 2*sigma_pp*sigma_pp) {
+            //    if (r_pn_2 < r_cut_off_torque_2){
                     //if (r_pn_2 < R_CUT_OFF_FORCE*R_CUT_OFF_FORCE){
                     //if (r_pn_2 < 1.0){
 
@@ -113,10 +116,11 @@ void corePeriodicTube(int t, double* x, double* y, double* theta, double* vx, do
                     torque_n[index_n] -= temp_torque_n;
                     number_n[index_n]++;
                     number_n[index_p]++;
-                }
+            //    }
                 //forceHarmonicPP(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, R_CUT_OFF_FORCE, LAMBDA_PP);
                 //forceOneOverRQuad(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
-                forceOneOverRQuadSig(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sigma_pp);
+                //forceOneOverRQuadSig(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sigma_pp);
+                forceHarmonicPP(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sqrt(r_cut_off_force_2), 10.0);
                 fx_n[index_p] += temp_fx_n;
                 fy_n[index_p] += temp_fy_n;
                 fx_n[index_n] -= temp_fx_n;
@@ -125,6 +129,9 @@ void corePeriodicTube(int t, double* x, double* y, double* theta, double* vx, do
                 deformation_n[index_n] += r_pn_2;
             }
 
+            //if ((y[index_p]> h/2) && (fy_n[index_p]+fy_b)>0){
+            //    printf("y: %lf,  fy_b: %lf, fy_n: %lf, theta:%lf\n", y[index_p], fy_b, fy_n[index_p], theta[index_p]);
+            //}
 
         } //For index_n
 
@@ -146,23 +153,27 @@ void corePeriodicFunnel(int t, double* x, double* y, double* theta, double* vx, 
         fx_b = 0;
         fy_b = 0;
         torque_b = 0;
+        double r_cut_off_force_2 = 1.21;
+
         if (fabs(y[index_p])> (fabs(x[index_p])*(h-h_funnel)/l)+h_funnel/2){
             forceHarmonicFunnel(&fx_b, &fy_b, x[index_p], y[index_p], l,  h, h_funnel, lambda_har);
             //NB, angle is wrong here...
-            torqueHarmonicOneD(&torque_b, theta[index_p], M_PI/2, lambda_har, kappa_har);
+            double angle = atan((h-h_funnel)/l);
+            torqueHarmonicOneD(&torque_b, theta[index_p], M_PI/2+angle*(1.0-2.0*signbit(x[index_p]))*(1.0-2.0*signbit(y[index_p])), lambda_har, kappa_har);
         }
 
         //
         for (index_n = index_p + 1; index_n < n_particles; index_n++){
             delta_x = x[index_p]-x[index_n];
-            if (fabs(delta_x) > (l-sqrt(2)*sigma_pp)){
+            if (fabs(delta_x) > (l-sqrt(r_cut_off_force_2))){
                 delta_x = delta_x - l*(1.0-2.0*signbit(delta_x));
             }
             delta_y = y[index_p]-y[index_n];
             r_pn_2 = delta_x*delta_x + delta_y*delta_y;
 
-            if (r_pn_2 < 2*sigma_pp*sigma_pp) {
-                if (r_pn_2 < r_cut_off_torque_2){
+            if (r_pn_2 < r_cut_off_force_2){
+            //if (r_pn_2 < 2*sigma_pp*sigma_pp) {
+            //    if (r_pn_2 < r_cut_off_torque_2){
                     //if (r_pn_2 < R_CUT_OFF_FORCE*R_CUT_OFF_FORCE){
                     //if (r_pn_2 < 1.0){
 
@@ -171,10 +182,11 @@ void corePeriodicFunnel(int t, double* x, double* y, double* theta, double* vx, 
                     torque_n[index_n] -= temp_torque_n;
                     number_n[index_n]++;
                     number_n[index_p]++;
-                }
+            //    }
                 //forceHarmonicPP(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, R_CUT_OFF_FORCE, LAMBDA_PP);
                 //forceOneOverRQuad(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
-                forceOneOverRQuadSig(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sigma_pp);
+                //forceOneOverRQuadSig(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sigma_pp);
+                forceHarmonicPP(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sqrt(r_cut_off_force_2), 10.0);
                 fx_n[index_p] += temp_fx_n;
                 fy_n[index_p] += temp_fy_n;
                 fx_n[index_n] -= temp_fx_n;
@@ -186,8 +198,6 @@ void corePeriodicFunnel(int t, double* x, double* y, double* theta, double* vx, 
 
         } //For index_n
 
-
-
         //Update Adams-Bashforth helping parameters
         upadteIntegrationParameters(&Y_x[index_p], &Y_y[index_p], &Y_th[index_p], &Y_x_prev[index_p], &Y_y_prev[index_p], &Y_th_prev[index_p], t, theta[index_p], fx_b, fy_b, torque_b, fx_n[index_p], fy_n[index_p], torque_n[index_p], number_n[index_p], fs_scale, u_0);
 
@@ -195,6 +205,10 @@ void corePeriodicFunnel(int t, double* x, double* y, double* theta, double* vx, 
         if (index_p >= n_fixed_particles){
             updateParticleParametersPeriodicX(&x[index_p], &y[index_p], &theta[index_p], &vx[index_p], &vy[index_p], Y_x[index_p], Y_y[index_p], Y_th[index_p], Y_x_prev[index_p], Y_y_prev[index_p], Y_th_prev[index_p], f_AB1, f_AB2, dt, d_r, a, r, l);
         }
+
+        //if ((vx[index_p]*vx[index_p]+vy[index_p]*vy[index_p])>4.0){
+        //    printf("x: %lf, y: %lf, vx: %lf, vy: %lf, fx_b: %lf, fy_b: %lf, fx_n: %lf, fy_n: %lf\n", x[index_p], y[index_p], vx[index_p], vy[index_p], fx_b, fy_b, fx_n[index_p], fy_n[index_p] );
+        //}
     }
 }
 

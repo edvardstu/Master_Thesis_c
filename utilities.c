@@ -41,6 +41,10 @@ double randDouble(double min, double max, gsl_rng ** r){
 }
 
 void openFile(const char * restrict fileName, FILE** fp){
+    //if(access(fileName, F_OK) == -1){
+    //    printf("Filepath does not exists\n");
+    //    exit(-1);
+    //}
     *fp = fopen(fileName, "w");
     if (fp == NULL){
         int errnum = errno;
