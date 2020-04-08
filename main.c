@@ -22,11 +22,11 @@
 #define H 27.0
 #define H_FUNNEL 20.0
 #define R_PARTICLE 0.5
-#define N_PARTICLES_I 500
+#define N_PARTICLES_I 1000
 #define U_0 1.0
-#define D_R_C 0.0 //0.2
+#define D_R_C 0.2 //0.2
 
-#define N_STEPS 50000//1000000
+#define N_STEPS 100000//1000000
 #define DT 0.005 //0.0005 for U_0=10.0
 
 //Diffusive parameters
@@ -49,7 +49,7 @@ const double SIGMA_PP = 1/sqrt(2);//1.5;//sqrt(2.0);//
 const double a = sqrt(3);
 
 //Fixed boundary particles
-#define N_FIXED_PARTICLES 0
+#define N_FIXED_PARTICLES 160
 
 //Infinite well variables
 //#define L 50.0
@@ -217,12 +217,25 @@ int main(int argc, char **argv) {
 
 
     if (!continueFromPrev){
-        //sunflower(x, y, N_PARTICLES, 0, R);
-        uniform_rectangle(x, y, N_PARTICLES, L, H, &r);
-        //sunflower_fixed_boundary(x, y, N_PARTICLES, 0, R+1.0, N_FIXED_PARTICLES, R*0.95);
+        switch (simulationBarrier) {
+            case Circular:
+                sunflower(x, y, N_PARTICLES, 0, R);
+                //sunflower_fixed_boundary(x, y, N_PARTICLES, 0, R+1.0, N_FIXED_PARTICLES, R*0.95);
+                break;
+            case Periodic:
+                uniformRectangle(x, y, N_PARTICLES, L, H, &r);
+                break;
+            case PeriodicTube:
+                uniformRectangle(x, y, N_PARTICLES, L, H, &r);
+                break;
+            case PeriodicFunnel:
+                uniformFunnel(x, y, N_PARTICLES, L, H, H_FUNNEL, &r);
+                fixedBoundaryFunnel(x, y, theta, N_PARTICLES, N_FIXED_PARTICLES, L, H, H_FUNNEL);
+                break;
+        }
         for (i=0; i<N_FIXED_PARTICLES; i++){
             //theta[i] = atan2(y[i], x[i]) + M_PI/2;
-            theta[i]=randDouble(-M_PI, M_PI, &r);
+            //theta[i]=randDouble(-M_PI, M_PI, &r);
             vx[i] = 0.1*U_0*cos(theta[i]);
             vy[i] = 0.1*U_0*sin(theta[i]);
         }

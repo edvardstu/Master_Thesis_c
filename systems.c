@@ -157,7 +157,9 @@ void corePeriodicFunnel(int t, double* x, double* y, double* theta, double* vx, 
 
         if (fabs(y[index_p])> (fabs(x[index_p])*(h-h_funnel)/l)+h_funnel/2){
             forceHarmonicFunnel(&fx_b, &fy_b, x[index_p], y[index_p], l,  h, h_funnel, lambda_har);
-            //NB, angle is wrong here...
+            if (fabs(x[index_p])>l*0.9/2){
+                fx_b = 0;
+            }
             double angle = atan((h-h_funnel)/l);
             torqueHarmonicOneD(&torque_b, theta[index_p], M_PI/2+angle*(1.0-2.0*signbit(x[index_p]))*(1.0-2.0*signbit(y[index_p])), lambda_har, kappa_har);
         }
