@@ -8,25 +8,26 @@
 #include <omp.h>
 #include <stdbool.h>
 
-
+#include "hdf5.h"
 #include "utilities.h"
 #include "interactions.h"
 #include "str_builder.h"
 #include "systems.h"
+#include "hdf5ReaderWriter.h"
 
 
 
 
 #define R 30.0//17.0
-#define L 27.0
-#define H 27.0
-#define H_FUNNEL 20.0
+#define L 25.0
+#define H 25.0
+#define H_FUNNEL 9.3
 #define R_PARTICLE 0.5
-#define N_PARTICLES_I 1000
-#define U_0 1.0
-#define D_R_C 0.2 //0.2
+#define N_PARTICLES_I 4
+#define U_0_I 1.0
+#define D_R_C 0.001 //0.2
 
-#define N_STEPS 100000//1000000
+#define N_STEPS 3//1000000
 #define DT 0.005 //0.0005 for U_0=10.0
 
 //Diffusive parameters
@@ -38,7 +39,7 @@
 #define KAPPA_HAR 10.0  //GS
 
 //Particle particle interaction
-#define GAMMA_PP 1.0//1.0 //GAM
+#define GAMMA_PP 0.0//1.0 //GAM
 #define R_CUT_OFF_TORQUE_2 4.0 //9.0
 #define LAMBDA_PP 40.0
 #define R_CUT_OFF_FORCE 1.0  //
@@ -49,7 +50,7 @@ const double SIGMA_PP = 1/sqrt(2);//1.5;//sqrt(2.0);//
 const double a = sqrt(3);
 
 //Fixed boundary particles
-#define N_FIXED_PARTICLES 160
+#define N_FIXED_PARTICLES 0
 
 //Infinite well variables
 //#define L 50.0
@@ -57,17 +58,22 @@ const double a = sqrt(3);
 
 
 enum barrier {Circular, Periodic, PeriodicTube, PeriodicFunnel};
-enum sweep {None, ParticleNumber, DiffusionCoefficient};
+enum sweep {None, ParticleNumber, DiffusionCoefficient, SelfPropulsion};
 
 
 int main(int argc, char **argv) {
+
+
+
     #ifdef _OPENMP
         printf("OpenMP is defined\n");
     #else
         printf("OpenMP is not defined\n");
     #endif
 
-/*
+
+
+    /*
     //#pragma omp parallel for
     for (int i=0; i<10; i++){
         if (i==0){
@@ -79,14 +85,14 @@ int main(int argc, char **argv) {
     }*/
 
     double time_start = walltime();
-    bool useAB = true;
+    bool useAB = false;
     bool rndSeed = true;
     const bool overwrite = true;
     bool continueFromPrev = false;
-    enum barrier simulationBarrier = PeriodicFunnel;
+    enum barrier simulationBarrier = Periodic;
     enum sweep simulationSweep = None;
-    int writeInterval = 200;
-    const char * restrict fileNameBaseInit = "results/periodic_funnel/test";
+    int writeInterval = 50;
+    const char * restrict fileNameBaseInit = "results/periodic_2D/phaseDiagram/testHDF5";
     //const char * restrict fileNameBase = "results/infWell/test";
 
 
@@ -112,32 +118,37 @@ int main(int argc, char **argv) {
 
     //Timeframe setup
 
-    int numberOfTimeframes = 1;
+    const int numberOfTimeframes = 1;
     for (int k=0; k<numberOfTimeframes; k++){
     printf("Timeframe %d of %d\n", k+1, numberOfTimeframes);
 
 
     ///////////////////Setting up sweep variables /////////////////////
-    double D_R;
+    double D_R = D_R_C;
     double D_R_I;
-    int N_PARTICLES;
-    double time;
+    int N_PARTICLES = N_PARTICLES_I;
+    double U_0 = U_0_I;
+    double time=0.0;
+
+    double U_0_array[] = {0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0, 2.0};//, 1.6, 1.7, 1.8, 2.0, 3.0};
+    int size = sizeof U_0_array / sizeof *U_0_array;
+    if (size!= numberOfTimeframes){
+        printf("Array of self propulsion velocity does not match sweep size.\n");
+        //exit(-1);
+    }
 
     switch (simulationSweep) {
         case None:
-            time = 0;
-            D_R = D_R_C;
-            N_PARTICLES = N_PARTICLES_I;
+            //Nothing
             break;
         case DiffusionCoefficient:
-            time = 0;
-            D_R = D_R_C;
-            N_PARTICLES = N_PARTICLES_I;
+            //Should be something here...
             break;
         case ParticleNumber:
-            time = 0;
-            D_R = D_R_C;
             N_PARTICLES = N_PARTICLES_I*(k+1);
+            break;
+        case SelfPropulsion:
+            U_0 = U_0_array[k];
             break;
     }
     ///////////////////////////////////////////////////////////////////
@@ -275,6 +286,26 @@ int main(int argc, char **argv) {
     for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, 0.0);
     /////////////////////////////////////////////////////////////////
 
+
+    //////////////// Parameters for HDF5 writer ////////////////////////////////
+    const char * restrict fileNameHDF5 = "results/periodic_2D/phaseDiagram/testHDF5.h5";
+
+    hid_t file_id, dataset_id;
+    const hsize_t n_cols = 2;
+    const hsize_t n_rows_slab = 3;
+    hsize_t chunk_dims[2] = {n_rows_slab, n_cols};
+    hid_t mem_space = H5Screate_simple(2, chunk_dims, NULL);
+    herr_t status;
+    hsize_t dims[2];
+
+    double buffer[n_rows_slab][n_cols];
+    hsize_t count[2] = {n_rows_slab, n_cols};
+    hsize_t start[2] = {0, 0};
+    ////////////////////////////////////////////////////////////////////////////
+
+    //////////////////////// Create HDF5 file //////////////////////////////////
+    createAndSetUpH5Env(&file_id, &dataset_id, chunk_dims, fileNameHDF5);
+    ////////////////////////////////////////////////////////////////////////////
 
     fs_scale = 0.0;
     //For each time step
@@ -423,6 +454,25 @@ int main(int argc, char **argv) {
             for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, deformation_n[i]);
         }
 
+        int i_h5;
+        double x_dummy[n_rows_slab];
+        double y_dummy[n_rows_slab];
+        for (i_h5=0; i_h5<n_rows_slab; i_h5++){
+            x_dummy[i_h5] = (t-1)*n_rows_slab*n_cols+2.0*i_h5+1.0;
+            y_dummy[i_h5] = (t-1)*n_rows_slab*n_cols+2.0*i_h5+2.0;
+            buffer[i_h5][0] = x_dummy[i_h5];
+            buffer[i_h5][1] = y_dummy[i_h5];
+            printf("%f, %f\n", buffer[i_h5][0], buffer[i_h5][1]);
+        }
+
+
+        extendDatasetH5(&dataset_id, chunk_dims, t);
+        //NB! should not be t here, but t/writeInterval
+        appendBufferToDatasetH5(buffer, &dataset_id, mem_space, start, count, t, n_rows_slab);
+
+
+
+
 
         omega = 0.0;
         for (i=0; i<N_PARTICLES; i++){
@@ -450,6 +500,9 @@ int main(int argc, char **argv) {
     closeFile(fileName, &fp);
     closeFile(fileNameSusc, &fp2);
     ///////////////////////////////////////////////////////////////////
+
+    closeFilesH5(&mem_space, &dataset_id, &file_id);
+
     //Freeing RNG
     gsl_rng_free (r);
     //fclose(fp);

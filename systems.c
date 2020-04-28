@@ -20,7 +20,8 @@ void corePeriodic(int t, double* x, double* y, double* theta, double* vx, double
         fx_b = 0;
         fy_b = 0;
         torque_b = 0;
-        double r_cut_off_force_2 = 1.21;
+        //double r_cut_off_force_2 = 1.21;
+        double r_cut_off_force_2 = 1.1025;
 
         for (index_n = index_p + 1; index_n < n_particles; index_n++){
             delta_x = x[index_p]-x[index_n];
@@ -54,7 +55,7 @@ void corePeriodic(int t, double* x, double* y, double* theta, double* vx, double
                 //forceWeeksChandlerAndersen(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
                 //forceLennardJonesShifted(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
                 //forceLennardJonesRepAndExpRep(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
-                forceHarmonicPP(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sqrt(r_cut_off_force_2), 10.0);
+                forceHarmonicPP(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sqrt(r_cut_off_force_2), 20.0);//,10.0);
                 //forceOneOverRQuad(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y);
                 //forceOneOverRQuadSig(&temp_fx_n, &temp_fy_n, r_pn_2, delta_x, delta_y, sigma_pp);
 
@@ -89,7 +90,7 @@ void corePeriodicTube(int t, double* x, double* y, double* theta, double* vx, do
         fx_b = 0;
         fy_b = 0;
         torque_b = 0;
-        double r_cut_off_force_2 = 1.21;
+        double r_cut_off_force_2 = 1.21;//1.21;
 
         if (fabs(y[index_p])> h/2){
             forceHarmonicOneD(&fy_b, y[index_p], (1.0-2.0*signbit(y[index_p]))*h/2, lambda_har);
