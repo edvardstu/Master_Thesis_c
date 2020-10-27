@@ -271,7 +271,7 @@ double walltime(){
 
 const char* restrict createFileNameBase(const char* restrict fileNameBase, bool overwrite){
     const char * restrict fileName;
-    const char * TXT = ".txt";
+    const char * TXT = ".h5";
     bool fileExists = true;
     int fileNumber = 0;
 
@@ -323,6 +323,18 @@ const char* restrict createFileName(const char* restrict fileNameBase){
     return fileName;
 }
 
+const char* restrict createFileNameH5(const char* restrict fileNameBase){
+    const char * restrict fileName;
+    const char * H5 = ".h5";
+    str_builder_t *sb;
+    sb = str_builder_create();
+    str_builder_add_str(sb, fileNameBase, 0);
+    str_builder_add_str(sb, H5, 0);
+    fileName = str_builder_dump(sb, NULL);
+    str_builder_destroy(sb);
+    return fileName;
+}
+
 const char* restrict createFileNameSucs(const char* restrict fileNameBase){
     const char * restrict fileName;
     const char * restrict susc = "Susc";
@@ -337,7 +349,7 @@ const char* restrict createFileNameSucs(const char* restrict fileNameBase){
     return fileName;
 }
 
-void writeSimulationParameters(const char* restrict fileNameBase, double r, double r_particle, unsigned int n_particles, double u_0, double D_r, unsigned int n_steps, double dt, double gamma_t, double gamma_r, double lambda_har, double kappa_har, double gamma_pp, double r_cut_off_torque_2, double lambda_pp, double r_cut_off_force, double sigma_pp){
+void writeSimulationParameters(const char* restrict fileNameBase, double r, double l, double h, double h_funnel, double r_particle, unsigned int n_particles, unsigned int n_fixed_particles, double u_0, double D_r, unsigned int n_steps, double dt, double gamma_t, double gamma_r, double lambda_har, double kappa_har, double gamma_pp, double lambda_pp, double r_cut_off_force_2, double r_cut_off_torque_2, double sigma_pp){
     str_builder_t *sb;
     FILE *fp;
     const char * TXT = ".txt";
@@ -350,10 +362,14 @@ void writeSimulationParameters(const char* restrict fileNameBase, double r, doub
 
     fprintf(fp, "System and particle parameters\n");
     fprintf(fp, "Radius of system: %.1f\n", r);
+    fprintf(fp, "Length of system: %.1f\n", l);
+    fprintf(fp, "Height of system: %.1f\n", h);
+    fprintf(fp, "Height of funnel: %.1f\n", h_funnel);
     fprintf(fp, "Radius of particles: %.3f\n", r_particle);
     fprintf(fp, "Number of particles: %d\n", n_particles);
-    fprintf(fp, "Particle velocity: %.1f\n", u_0);
-    fprintf(fp, "D_r: %.3f\n", D_r);
+    fprintf(fp, "Number of fixed particles: %d\n", n_fixed_particles);
+    fprintf(fp, "Particle velocity: %.2f\n", u_0);
+    fprintf(fp, "Diffusion coefficient: %.3f\n", D_r);
 
     fprintf(fp, "\nNummerical solver parameters\n");
     fprintf(fp, "Number of steps: %d\n", n_steps);
@@ -369,9 +385,9 @@ void writeSimulationParameters(const char* restrict fileNameBase, double r, doub
 
     fprintf(fp, "\nParticle-Particle interaction\n");
     fprintf(fp, "Gamma particle-particle: %.1f\n", gamma_pp);
-    fprintf(fp, "Cut off radius for torque squared: %.1f\n", r_cut_off_torque_2);
     fprintf(fp, "Lambda particle-particle: %.1f\n", lambda_pp);
-    fprintf(fp, "Cut off radius force: %.1f\n", r_cut_off_force);
+    fprintf(fp, "Cut off radius force squared: %.4f\n", r_cut_off_force_2);
+    fprintf(fp, "Cut off radius for torque squared: %.4f\n", r_cut_off_torque_2);
     fprintf(fp, "Sigma particle-particle: %.3f\n", sigma_pp);
 
 

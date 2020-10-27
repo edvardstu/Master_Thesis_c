@@ -17,17 +17,19 @@
 
 
 
-
+//System and particle parameters
 #define R 30.0//17.0
 #define L 25.0
 #define H 25.0
 #define H_FUNNEL 9.3
 #define R_PARTICLE 0.5
-#define N_PARTICLES_I 4
+#define N_PARTICLES_I 1000
+#define N_FIXED_PARTICLES 0
+#define N_A 500
 #define U_0_I 1.0
 #define D_R_C 0.001 //0.2
 
-#define N_STEPS 3//1000000
+#define N_STEPS 1000
 #define DT 0.005 //0.0005 for U_0=10.0
 
 //Diffusive parameters
@@ -40,24 +42,28 @@
 
 //Particle particle interaction
 #define GAMMA_PP 0.0//1.0 //GAM
-#define R_CUT_OFF_TORQUE_2 4.0 //9.0
-#define LAMBDA_PP 40.0
-#define R_CUT_OFF_FORCE 1.0  //
-//#define SIGMA_PP pow(1/2, 1/6)
-//#define SIGMA_PP 1.0 //(SIGMA_PP*2)^2 > R_CUT_OFF_TORQUE_2
+#define LAMBDA_PP 20.0
+#define R_CUT_OFF_FORCE_2 1.1025  //
+#define R_CUT_OFF_TORQUE_2 1.1025 //9.0
 const double SIGMA_PP = 1/sqrt(2);//1.5;//sqrt(2.0);//
 
-const double a = sqrt(3);
+double R_CUT_OFF_FORCE_2_ARRAY[] = {0.7225, 1.1025, 1.5625}; //AA, AB, BB
 
-//Fixed boundary particles
-#define N_FIXED_PARTICLES 0
+double R_CUT_OFF_FORCE_2_MARTIX[N_PARTICLES_I][N_PARTICLES_I];
+
+//double** R_CUT_OFF_FORCE_2_MARTIX = (double **)malloc(N_PARTICLES_I * sizeof(double*));
+//for (int i = 0; i < N_PARTICLES_I; i++) R_CUT_OFF_FORCE_2_MARTIX[i] = (double *)malloc(N_PARTICLES_I * sizeof(double));
+//double (*R_CUT_OFF_FORCE_2_MARTIX)[N_PARTICLES_I] = malloc(N_PARTICLES_I * sizeof( *R_CUT_OFF_FORCE_2_MARTIX));
+
+const double a = sqrt(3);
 
 //Infinite well variables
 //#define L 50.0
 #define U_S 0.5
 
-
-enum barrier {Circular, Periodic, PeriodicTube, PeriodicFunnel};
+//Type of boundary for simulation
+enum barrier {Circular, Periodic, PeriodicTube, PeriodicFunnel, PeriodicBM};
+//Parameter to sweep
 enum sweep {None, ParticleNumber, DiffusionCoefficient, SelfPropulsion};
 
 
@@ -87,13 +93,18 @@ int main(int argc, char **argv) {
     double time_start = walltime();
     bool useAB = false;
     bool rndSeed = true;
-    const bool overwrite = true;
+    const bool overwrite = false;
     bool continueFromPrev = false;
-    enum barrier simulationBarrier = Periodic;
-    enum sweep simulationSweep = None;
+    enum barrier simulationBarrier = PeriodicBM;
+    enum sweep simulationSweep = SelfPropulsion;
     int writeInterval = 50;
-    const char * restrict fileNameBaseInit = "results/periodic_2D/phaseDiagram/testHDF5";
-    //const char * restrict fileNameBase = "results/infWell/test";
+    //const char * restrict fileNameBaseInit = "results/periodic_2D/phaseDiagram/gamma_pp_0_1/test";
+    //const char * restrict fileNameBaseInit = "results/periodic_2D/phaseDiagram/gamma_pp_0_0/01/sweepPropulsion";
+    //const char * restrict fileNameBaseInit = "/media/edvardst/My Book/NTNU/Programming/Master_Thesis/Periodic_2D/phaseDiagram/gamma_pp_0_0/highDensity/sweepPropulsion";
+    const char * restrict fileNameBaseInit = "/home/edvardst/Documents/NTNU/Programming/Master_Thesis/Master_Thesis_c/results/paperTest/dummy";
+
+
+
 
 
 
@@ -106,22 +117,21 @@ int main(int argc, char **argv) {
     }
 
 
-    //For testing solver, bool rndSeed
-    /*
-    int FACTOR;
-    double N_STEPS, DT;
-    for (FACTOR = 1; FACTOR <= 1; FACTOR*=10){
-        //N_STEPS = 1000*FACTOR;
-        N_STEPS = 10000*FACTOR;
-        DT = 0.001/FACTOR;
-    */
 
+    int numberOfTimeframes;
+    //double U_0_array[] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0};
+    double U_0_array[] = {1.0};
+    //double U_0_array[] = {0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0, 2.0};
     //Timeframe setup
+    if (simulationSweep == SelfPropulsion){
+        numberOfTimeframes = sizeof U_0_array / sizeof *U_0_array;
+    } else {
+        numberOfTimeframes = 1;
+    }
 
-    const int numberOfTimeframes = 1;
+
     for (int k=0; k<numberOfTimeframes; k++){
     printf("Timeframe %d of %d\n", k+1, numberOfTimeframes);
-
 
     ///////////////////Setting up sweep variables /////////////////////
     double D_R = D_R_C;
@@ -129,13 +139,6 @@ int main(int argc, char **argv) {
     int N_PARTICLES = N_PARTICLES_I;
     double U_0 = U_0_I;
     double time=0.0;
-
-    double U_0_array[] = {0.01, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0, 2.0};//, 1.6, 1.7, 1.8, 2.0, 3.0};
-    int size = sizeof U_0_array / sizeof *U_0_array;
-    if (size!= numberOfTimeframes){
-        printf("Array of self propulsion velocity does not match sweep size.\n");
-        //exit(-1);
-    }
 
     switch (simulationSweep) {
         case None:
@@ -173,7 +176,7 @@ int main(int argc, char **argv) {
 
 
     //////////////////////Setting up variables ////////////////////////
-    FILE *fp, *fp2;
+    FILE *fp;//, *fp2;
     double x[N_PARTICLES], y[N_PARTICLES], theta[N_PARTICLES], vx[N_PARTICLES], vy[N_PARTICLES];
     double fs_scale;
     //Loop parameters
@@ -184,7 +187,6 @@ int main(int argc, char **argv) {
     double delta_x, delta_y, temp_fx_n, temp_fy_n, temp_torque_n, r_pn_2;
     //Parameters for four point susceptibility
     double omega;
-
     //Helping variables for Adams_Bashforth
     double *Y_x = malloc(N_PARTICLES*sizeof(double));
     double *Y_x_prev = malloc(N_PARTICLES*sizeof(double));
@@ -196,8 +198,9 @@ int main(int argc, char **argv) {
     //Parameters for loading previos Results
     const char * restrict fileNameBase;
     const char * restrict fileName;
+    const char * restrict fileNameHDF5;
     const char * restrict fileNamePrevious;
-    const char * restrict fileNameSusc;
+    // const char * restrict fileNameSusc;
 
     //bool continueFromPrev = true;
 
@@ -209,13 +212,19 @@ int main(int argc, char **argv) {
     double areaFaction = particleArea*N_PARTICLES/(H*L);
     double packingFraction = areaFaction/0.82;
     printf("The system has an area fraction of: %f, and a packing fraction of: %f\n",areaFaction, packingFraction);
+    double particleAreaA = M_PI_4*sqrt(R_CUT_OFF_FORCE_2_ARRAY[0]);
+    double particleAreaB = M_PI_4*sqrt(R_CUT_OFF_FORCE_2_ARRAY[2]);
+    areaFaction = (particleAreaA*N_A + particleAreaB*(N_PARTICLES-N_A))/(H*L);
+    packingFraction = areaFaction/0.82;
+    printf("The binary mixture has an area fraction of: %f, and a packing fraction of: %f\n",areaFaction, packingFraction);
     ///////////////////////////////////////////////////////////////////
 
     ////////////////////// Creating file names ////////////////////////
     fileNamePrevious = createFileNamePrevious(fileNameBaseInit, overwrite);
     fileNameBase = createFileNameBase(fileNameBaseInit, overwrite);
     fileName = createFileName(fileNameBase);
-    fileNameSusc = createFileNameSucs(fileNameBase);
+    fileNameHDF5 = createFileNameH5(fileNameBase);
+    //fileNameSusc = createFileNameSucs(fileNameBase);
     ///////////////////////////////////////////////////////////////////
 
     //////////////////////Setting up GSL RNG ////////////////////////
@@ -225,8 +234,6 @@ int main(int argc, char **argv) {
     /////////////////////////////////////////////////////////////////
 
     //////////Setting up particle position and angle ////////////////
-
-
     if (!continueFromPrev){
         switch (simulationBarrier) {
             case Circular:
@@ -242,6 +249,20 @@ int main(int argc, char **argv) {
             case PeriodicFunnel:
                 uniformFunnel(x, y, N_PARTICLES, L, H, H_FUNNEL, &r);
                 fixedBoundaryFunnel(x, y, theta, N_PARTICLES, N_FIXED_PARTICLES, L, H, H_FUNNEL);
+                break;
+            case PeriodicBM:
+                uniformRectangle(x, y, N_PARTICLES, L, H, &r);
+                for (i=0; i<N_PARTICLES; i++){
+                    for (int j=0; j<N_PARTICLES; j++){
+                        if ((i < N_A) && (j < N_A)){
+                            R_CUT_OFF_FORCE_2_MARTIX[i][j] = R_CUT_OFF_FORCE_2_ARRAY[0];
+                        } else if ((i >= N_A) && (j >= N_A)){
+                            R_CUT_OFF_FORCE_2_MARTIX[i][j] = R_CUT_OFF_FORCE_2_ARRAY[2];
+                        } else {
+                            R_CUT_OFF_FORCE_2_MARTIX[i][j] = R_CUT_OFF_FORCE_2_ARRAY[1];
+                        }
+                    }
+                }
                 break;
         }
         for (i=0; i<N_FIXED_PARTICLES; i++){
@@ -262,37 +283,21 @@ int main(int argc, char **argv) {
             printf("D_r was initilized to %.3f, but change to %.3f\n", D_R_C, D_R_I);
         }
     }
-
-
-
-    // x[0]=L/4;
-    // y[0]=0;
-    // theta[0] = M_PI/2;
-    // x[1]=-L/4;
-    // y[1]=0;
-    // theta[1] = -M_PI/2;
-    // vx[0] = U_0*cos(theta[0]);
-    // vy[0] = U_0*sin(theta[0]);
-    // vx[1] = U_0*cos(theta[1]);
-    // vy[1] = U_0*sin(theta[1]);
-
-
     /////////////////////////////////////////////////////////////////
 
     ///////////////////Opening file for results ///////////////////////
-    writeSimulationParameters(fileNameBase, R, R_PARTICLE, N_PARTICLES, U_0, D_R, N_STEPS, DT, GAMMA_T, GAMMA_R, LAMBDA_HAR, KAPPA_HAR, GAMMA_PP, R_CUT_OFF_TORQUE_2, LAMBDA_PP, R_CUT_OFF_FORCE, SIGMA_PP);
-    openFile(fileName, &fp);
-    openFile(fileNameSusc, &fp2);
-    for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, 0.0);
+    writeSimulationParameters(fileNameBase, R, L, H, H_FUNNEL, R_PARTICLE, N_PARTICLES, N_FIXED_PARTICLES, U_0, D_R, N_STEPS, DT, GAMMA_T, GAMMA_R, LAMBDA_HAR, KAPPA_HAR, GAMMA_PP, LAMBDA_PP, R_CUT_OFF_FORCE_2, R_CUT_OFF_TORQUE_2, SIGMA_PP);
+
+    //openFile(fileName, &fp);
+    // openFile(fileNameSusc, &fp2);
+    //for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, 0.0);
     /////////////////////////////////////////////////////////////////
 
 
     //////////////// Parameters for HDF5 writer ////////////////////////////////
-    const char * restrict fileNameHDF5 = "results/periodic_2D/phaseDiagram/testHDF5.h5";
-
     hid_t file_id, dataset_id;
-    const hsize_t n_cols = 2;
-    const hsize_t n_rows_slab = 3;
+    n_cols = 7;
+    const hsize_t n_rows_slab = N_PARTICLES;
     hsize_t chunk_dims[2] = {n_rows_slab, n_cols};
     hid_t mem_space = H5Screate_simple(2, chunk_dims, NULL);
     herr_t status;
@@ -305,6 +310,13 @@ int main(int argc, char **argv) {
 
     //////////////////////// Create HDF5 file //////////////////////////////////
     createAndSetUpH5Env(&file_id, &dataset_id, chunk_dims, fileNameHDF5);
+    ////////////////////////////////////////////////////////////////////////////
+
+    /////////////////////// Write inital state /////////////////////////////////
+    transposeSimulationData(buffer, N_PARTICLES, time, x, y, theta, vx, vy);
+    int writeNumber = 0;
+    extendDatasetH5(&dataset_id, chunk_dims, writeNumber);
+    appendBufferToDatasetH5(buffer, &dataset_id, mem_space, start, count, writeNumber, n_rows_slab);
     ////////////////////////////////////////////////////////////////////////////
 
     fs_scale = 0.0;
@@ -432,17 +444,21 @@ int main(int argc, char **argv) {
         } //For index_p
             break;
 
-            case PeriodicTube:
+            case Periodic:
                 //corePeriodicTube(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR);
-                corePeriodicTube(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
+                corePeriodic(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, GAMMA_PP, LAMBDA_PP, R_CUT_OFF_FORCE_2, R_CUT_OFF_TORQUE_2, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
                 break;
 
-            case Periodic:
-                corePeriodic(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
+            case PeriodicTube:
+                corePeriodicTube(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
                 break;
 
             case PeriodicFunnel:
                 corePeriodicFunnel(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, H_FUNNEL, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, R_CUT_OFF_TORQUE_2, GAMMA_PP, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n);
+                break;
+
+            case PeriodicBM:
+                corePeriodicBM(t, x, y, theta, vx, vy, fx_b, fy_b, torque_b, fx_n, fy_n, torque_n, number_n, deformation_n, Y_x, Y_y, Y_th, Y_x_prev, Y_y_prev, Y_th_prev, index_p, index_n, fs_scale, f_AB1, f_AB2, &r, N_PARTICLES, N_FIXED_PARTICLES, DT, D_R, a, U_0, L, H, LAMBDA_HAR, KAPPA_HAR, delta_x, delta_y, r_pn_2, GAMMA_PP, LAMBDA_PP, R_CUT_OFF_FORCE_2_MARTIX, R_CUT_OFF_TORQUE_2, SIGMA_PP, temp_fx_n, temp_fy_n, temp_torque_n, N_A);
                 break;
         } // switch simulationBarrier
 
@@ -450,40 +466,24 @@ int main(int argc, char **argv) {
         if (thread_n == 0){
         time += DT;
         if (t % writeInterval == 0){
-        //if (t%FACTOR == 0){
-            for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, deformation_n[i]);
-        }
-
-        int i_h5;
-        double x_dummy[n_rows_slab];
-        double y_dummy[n_rows_slab];
-        for (i_h5=0; i_h5<n_rows_slab; i_h5++){
-            x_dummy[i_h5] = (t-1)*n_rows_slab*n_cols+2.0*i_h5+1.0;
-            y_dummy[i_h5] = (t-1)*n_rows_slab*n_cols+2.0*i_h5+2.0;
-            buffer[i_h5][0] = x_dummy[i_h5];
-            buffer[i_h5][1] = y_dummy[i_h5];
-            printf("%f, %f\n", buffer[i_h5][0], buffer[i_h5][1]);
+            // for (i=0;i<N_PARTICLES;i++) fprintf(fp,"%d %lf %lf %lf %lf %lf %lf %lf %lf\n", i, time, x[i], y[i], theta[i], vx[i], vy[i], D_R, deformation_n[i]);
+            transposeSimulationData(buffer, N_PARTICLES, time, x, y, theta, vx, vy);
+            int writeNumber = t/writeInterval;
+            extendDatasetH5(&dataset_id, chunk_dims, writeNumber);
+            appendBufferToDatasetH5(buffer, &dataset_id, mem_space, start, count, writeNumber, n_rows_slab);
         }
 
 
-        extendDatasetH5(&dataset_id, chunk_dims, t);
-        //NB! should not be t here, but t/writeInterval
-        appendBufferToDatasetH5(buffer, &dataset_id, mem_space, start, count, t, n_rows_slab);
-
-
-
-
-
-        omega = 0.0;
-        for (i=0; i<N_PARTICLES; i++){
-            delta_x = vx[i];
-            delta_y = vy[i];
-            if ((delta_x*delta_x+delta_y*delta_y)<(0.25*U_0*U_0)){
-                omega+=1.0;
-            }
-        }
-        omega/=N_PARTICLES;
-        fprintf(fp2, "%lf %lf\n", time, omega);
+        // omega = 0.0;
+        // for (i=0; i<N_PARTICLES; i++){
+        //     delta_x = vx[i];
+        //     delta_y = vy[i];
+        //     if ((delta_x*delta_x+delta_y*delta_y)<(0.25*U_0*U_0)){
+        //         omega+=1.0;
+        //     }
+        // }
+        // omega/=N_PARTICLES;
+        // fprintf(fp2, "%lf %lf\n", time, omega);
 
         //Swapping pointer of help parameters for AB
         swapPointers(&Y_x, &Y_x_prev);
@@ -497,15 +497,14 @@ int main(int argc, char **argv) {
 
 
     ///////////////////Closing file with results //////////////////////
-    closeFile(fileName, &fp);
-    closeFile(fileNameSusc, &fp2);
+    //closeFile(fileName, &fp);
+    // closeFile(fileNameSusc, &fp2);
     ///////////////////////////////////////////////////////////////////
 
     closeFilesH5(&mem_space, &dataset_id, &file_id);
 
     //Freeing RNG
     gsl_rng_free (r);
-    //fclose(fp);
 
     double time_end = walltime();
     printf("Simulation time: %7.3f s\n",(time_end-time_start));

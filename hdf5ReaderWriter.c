@@ -24,16 +24,16 @@ void createAndSetUpH5Env(hid_t *file_id, hid_t *dataset_id, hsize_t chunk_dims[]
     H5Sclose(dataspace_id);
 }
 
-void extendDatasetH5(hid_t *dataset_id, hsize_t chunk_dims[], int t){
+void extendDatasetH5(hid_t *dataset_id, hsize_t chunk_dims[], int writeNumber){
     hsize_t dims[2];
-    dims[0]= t*chunk_dims[0];
+    dims[0]= (writeNumber+1)*chunk_dims[0];
     dims[1]=chunk_dims[1];
     H5Dset_extent(*dataset_id, dims);
 }
 
-void appendBufferToDatasetH5(double* buffer, hid_t *dataset_id, hid_t mem_space, hsize_t start[], hsize_t count[], int t, int n_particles){
+void appendBufferToDatasetH5(double buffer[][n_cols], hid_t *dataset_id, hid_t mem_space, hsize_t start[], hsize_t count[], int writeNumber, int n_particles){
     hid_t dataspace_id = H5Dget_space(*dataset_id);
-    start[0] = (t-1)*n_particles;
+    start[0] = (writeNumber)*n_particles;
     H5Sselect_hyperslab(dataspace_id, H5S_SELECT_SET, start, NULL, count, NULL);
     H5Dwrite(*dataset_id, H5T_NATIVE_DOUBLE, mem_space, dataspace_id, H5P_DEFAULT, buffer);
     H5Sclose(dataspace_id);
@@ -43,4 +43,16 @@ void closeFilesH5(hid_t *mem_space, hid_t *dataset_id, hid_t *file_id){
     H5Sclose(*mem_space);
     H5Dclose(*dataset_id);
     H5Fclose(*file_id);
+}
+
+void transposeSimulationData(double buffer[][n_cols], int n_particles, double time, double* x, double* y, double* theta, double* vx, double* vy){
+    for (int i=0; i<n_particles; i++){
+        buffer[i][0] = (double) i;
+        buffer[i][1] = time;
+        buffer[i][2] = x[i];
+        buffer[i][3] = y[i];
+        buffer[i][4] = theta[i];
+        buffer[i][5] = vx[i];
+        buffer[i][6] = vy[i];
+    }
 }
